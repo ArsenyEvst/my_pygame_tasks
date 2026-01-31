@@ -1,0 +1,78 @@
+import pygame as pg
+import random
+import time
+
+FPS = 60
+WIDTH, HEIGHT = 1600, 800
+WIDTHP = 1045
+HEIGHTH, HEIGHTL = 100, 300
+SPEEDO, SPEEDT = 10, 15
+WHITE = (255, 255, 255)
+SILVER = (164, 164, 164)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BRASS = (250, 147, 117)
+YELLOW, DARK_YELLOW = (255, 255, 0), (224, 207, 18)
+tick = 0
+
+
+class Player:
+    def __init__(self):
+        self.origin_surf = pg.image.load(r'images\car_orig.png').convert_alpha()
+        self.actual_surf = self.origin_surf.copy()
+        self.rect = self.origin_surf.get_rect(center=(WIDTH / 2, HEIGHT / 2))
+        self.speed = 5
+
+    def move(self, dx=0, dy=0):
+        if (self.rect.centerx - 43 + dx * self.speed) > 0 and (self.rect.centerx + 43 + dx * self.speed) < WIDTH:
+            self.rect.x += dx * self.speed
+        if (self.rect.centery - 25 + dy * self.speed) > 0 and (self.rect.centery + 25 + dy * self.speed) < HEIGHT:
+            self.rect.y += dy * self.speed
+        if dx == 1: self.actual_surf = pg.transform.rotate(self.origin_surf, 270)
+        if dx == -1: self.actual_surf = pg.transform.rotate(self.origin_surf, 90)
+        if dy == 1: self.actual_surf = pg.transform.rotate(self.origin_surf, 180)
+        if dy == -1: self.actual_surf = pg.transform.rotate(self.origin_surf, 0)
+
+    def draw(self, screen):
+        screen.blit(self.actual_surf, self.rect)
+
+
+pg.init()
+screen = pg.display.set_mode((WIDTH, HEIGHT))
+screen.fill(WHITE)
+pg.display.set_caption("Игра")
+player = Player()
+clock = pg.time.Clock()
+
+background = pg.Surface((WIDTH, HEIGHT))
+background.fill(SILVER)
+
+screen.blit(background, (0, 0))
+pg.display.update()
+
+flag_play, flag_draw = True, False
+while flag_play:
+    clock.tick(FPS)
+    tick += 1
+
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            pg.quit()
+            flag_play = False
+            break
+    if not flag_play:
+        break
+
+    keys = pg.key.get_pressed()
+    if keys[pg.K_LEFT]:
+        player.move(dx=-1)
+    elif keys[pg.K_RIGHT]:
+        player.move(dx=1)
+    elif keys[pg.K_UP]:
+        player.move(dy=-1)
+    elif keys[pg.K_DOWN]:
+        player.move(dy=1)
+
+    screen.blit(background, (0, 0))
+    player.draw(screen)
+    pg.display.update()
