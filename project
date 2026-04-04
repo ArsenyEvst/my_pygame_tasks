@@ -2,38 +2,40 @@
 import pygame as pg
 import random
 
-FPS = 6
+FPS = 60
 WIDTH, HEIGHT = 1600, 600
 WHITE = (255, 255, 255)
 SILVER = (164, 164, 164)
 tickC = 0
 tickO = 0
 tickR = 0
-tickJ = 0
+tickJ = 60
 
 
 class Dino(pg.sprite.Sprite):
     def __init__(self):
         pg.sprite.Sprite.__init__(self)
         self.image = pg.image.load(r'images/Chrome_T-Rex_Right_Run.png').convert_alpha()
-        self.image = pg.transform.scale(self.image, (90, 85))
         self.rect = self.image.get_rect(center=(100, 510))
         self.mask = pg.mask.from_surface(self.image)
         self.speed = 0
         self.g = 0
         self.flag_leg = 1
+        self.tickK = 0
 
     def jump(self, dy=0):
-        global tickJ
         if dy == -1:
-            self.speed = 50
-            self.g = 2
-            tickJ = min(tickJ, 3)
-        self.speed -= self.g * tickJ
+            self.speed = 11
+            self.g = 0.04
+            self.tickK = 1
+        self.speed -= self.g * self.tickK
+        self.tickK += 1
         self.rect.y -= self.speed
-            # if self.rect.y >= 550 or self.rect.y < 0:
-            #     self.speed = 3
-            #     self.rect.y = 510
+        if self.rect.center[1] >= 510:
+            self.rect.center = (100, 510)
+            self.speed = 0
+            self.g = 0
+            self.tickK = 0
 
     def run(self):
         global tickR
@@ -173,7 +175,8 @@ while flag_play:
         obstacles.add(Obstacle())
 
     keys = pg.key.get_pressed()
-    if (keys[pg.K_UP] or keys[pg.K_SPACE]) and tickJ >= 3:
+    if (keys[pg.K_UP] or keys[pg.K_SPACE]) and tickJ >= 60:
+        tickJ = 0
         dino.jump(dy=-1)
     if keys[pg.K_DOWN]:
         dino.jump(dy=1)
