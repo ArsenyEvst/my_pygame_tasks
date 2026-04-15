@@ -3,50 +3,98 @@ import pygame as pg
 import random
 
 FPS = 60
-WIDTH, HEIGHT = 1600, 600
+WIDTH, HEIGHT = 1600, 400
 WHITE = (255, 255, 255)
-SILVER = (164, 164, 164)
 tickC = 0
 tickO = 0
 tickR = 0
-tickJ = 60
+tickJ = 0
+tickF = 0
+spawn = -1
+time_play = 0
+STATE_NORMAL = "normal"
+STATE_JUMP = "jump"
+STATE_DUCK = "duck"
 
 
 class Dino(pg.sprite.Sprite):
     def __init__(self):
         pg.sprite.Sprite.__init__(self)
         self.image = pg.image.load(r'images/Chrome_T-Rex_Right_Run.png').convert_alpha()
-        self.rect = self.image.get_rect(center=(100, 510))
+        self.rect = self.image.get_rect(bottom=350)
+        self.rect.centerx = 100
         self.mask = pg.mask.from_surface(self.image)
         self.speed = 0
         self.g = 0
-        self.flag_leg = 1
+        self.flag_leg = True
+        self.flag_state = STATE_NORMAL
         self.tickK = 0
 
     def jump(self, dy=0):
-        if dy == -1:
-            self.speed = 11
+        if dy == -1 and self.flag_state != STATE_DUCK:
+            self.flag_state = STATE_JUMP
+            self.speed = 10
             self.g = 0.04
             self.tickK = 1
         self.speed -= self.g * self.tickK
         self.tickK += 1
         self.rect.y -= self.speed
-        if self.rect.center[1] >= 510:
-            self.rect.center = (100, 510)
+        if self.flag_state == STATE_JUMP and self.rect.bottom > 350:
+            self.rect.bottom = 350
+            self.rect.centerx = 100
             self.speed = 0
             self.g = 0
             self.tickK = 0
+            self.flag_state = STATE_NORMAL
 
-    def run(self):
+    def run(self, dy=0):
         global tickR
-        if self.flag_leg == 1 and tickR == 10:
-            self.image = pg.image.load(r'images/Chrome_T-Rex_Left_Run.png').convert_alpha()
-            self.flag_leg = 0
+
+        flag_temp = -1
+        if dy == 0 and self.flag_state != STATE_JUMP:
+            self.flag_state = STATE_NORMAL
+            flag_temp = 1
+        if dy == 1 and self.flag_state != STATE_JUMP:
+            flag_temp = 2
+            self.flag_state = STATE_DUCK
+        if self.flag_state != STATE_JUMP:
+            if dy == 1:
+                self.flag_state = STATE_DUCK
+            else:
+                self.flag_state = STATE_NORMAL
+
+        if tickR >= 10 and self.flag_state != STATE_JUMP:
+            if self.flag_state == STATE_NORMAL:
+                if self.flag_leg:
+                    self.flag_leg = False
+                    self.image = pg.image.load(r'images/Chrome_T-Rex_Left_Run.png').convert_alpha()
+                else:
+                    self.flag_leg = True
+                    self.image = pg.image.load(r'images/Chrome_T-Rex_Right_Run.png').convert_alpha()
+            else:
+                if self.flag_leg:
+                    self.flag_leg = False
+                    self.image = pg.image.load(r'images/Chrome_T-Rex_Left_Duck.png').convert_alpha()
+                else:
+                    self.flag_leg = True
+                    self.image = pg.image.load(r'images/Chrome_T-Rex_Right_Duck.png').convert_alpha()
+            self.mask = pg.mask.from_surface(self.image)
             tickR = 0
-        elif self.flag_leg == 0 and tickR == 10:
-            self.image = pg.image.load(r'images/Chrome_T-Rex_Right_Run.png').convert_alpha()
-            self.flag_leg = 1
-            tickR = 0
+
+        if self.flag_state != STATE_JUMP:
+            self.rect = self.image.get_rect(bottom=350)
+            self.rect.centerx = 100
+
+        # if flag_temp == 1:
+        #     self.rect = self.image.get_rect(center=(100, 510))
+        # elif flag_temp == 2:
+        #     self.rect = self.image.get_rect(center=(100, 526))
+
+    def death(self, dead=0):
+        if dead == 1:
+            self.image = pg.image.load(r'images/Dead_Chrome_T-Rex.png')
+            self.rect.centerx = 100
+            screen.blit(self.image, self.rect)
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -57,11 +105,11 @@ class Horizon(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self)
         self.len_horizon = 2400
         self.flag_horizon = 1
-        self.yC = random.randrange(100, 400)
+        self.yC = random.randrange(100, 200)
         self.imageH1 = pg.image.load(r'images/Chromium_T-Rex-horizon.png').convert_alpha()
-        self.rectH1 = self.imageH1.get_rect(center=(WIDTH / 2, 550))
+        self.rectH1 = self.imageH1.get_rect(center=(WIDTH / 2, 350))
         self.imageH2 = pg.image.load(r'images/Chromium_T-Rex-horizon.png').convert_alpha()
-        self.rectH2 = self.imageH2.get_rect(center=(WIDTH / 2 + self.len_horizon, 550))
+        self.rectH2 = self.imageH2.get_rect(center=(WIDTH / 2 + self.len_horizon, 350))
         self.maskH = pg.mask.from_surface(self.imageH1)
         self.imageC = pg.image.load(r'images/Chromium_T-Rex-cloud.png').convert_alpha()
         self.rectC = self.imageC.get_rect(center=(WIDTH / 2, self.yC))
@@ -69,18 +117,23 @@ class Horizon(pg.sprite.Sprite):
         self.speed = 10
 
     def update(self):
+        global time_play
+
         self.rectH1.x -= self.speed
         self.rectH2.x -= self.speed
         if self.flag_horizon == 1:
             if self.rectH2.centerx <= WIDTH / 2:
                 self.imageH1 = pg.image.load(r'images/Chromium_T-Rex-horizon.png').convert_alpha()
-                self.rectH1 = self.imageH1.get_rect(center=(WIDTH / 2 + self.len_horizon, 550))
+                self.rectH1 = self.imageH1.get_rect(center=(WIDTH / 2 + self.len_horizon - 100, 350))
                 self.flag_horizon = 2
         elif self.flag_horizon == 2:
             if self.rectH1.centerx <= WIDTH / 2:
                 self.imageH2 = pg.image.load(r'images/Chromium_T-Rex-horizon.png').convert_alpha()
-                self.rectH2 = self.imageH2.get_rect(center=(WIDTH / 2 + self.len_horizon, 550))
+                self.rectH2 = self.imageH2.get_rect(center=(WIDTH / 2 + self.len_horizon - 100, 350))
                 self.flag_horizon = 1
+
+    def timer(self):
+        self.speed += 1
 
     def draw(self, screen):
         screen.blit(self.imageH1, self.rectH1)
@@ -90,11 +143,9 @@ class Horizon(pg.sprite.Sprite):
 class Cloud(pg.sprite.Sprite):
     def __init__(self):
         pg.sprite.Sprite.__init__(self)
-        self.yC = random.randrange(100, 400)
-        self.xC = 1700
         self.speedC = random.randrange(1, 5)
         self.image = pg.image.load(r'images/Chromium_T-Rex-cloud.png').convert_alpha()
-        self.rect = self.image.get_rect(center=(self.xC, self.yC))
+        self.rect = self.image.get_rect(center=(1700, random.randrange(40, 200)))
         self.maskC = pg.mask.from_surface(self.image)
         self.active = True
 
@@ -112,18 +163,58 @@ class Obstacle(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self)
         obstacles_image = [r'images/1_Cactus_Chrome_Dino.png', r'images/3_Cactus_Chrome_Dino.png']
         obstacle_is = random.choice(obstacles_image)
-        self.image = pg.image.load(obstacle_is)
-        self.xC = 1650
-        self.yC = 515
-        self.rect = self.image.get_rect(center=(self.xC, self.yC))
+        self.image = pg.image.load(obstacle_is).convert_alpha()
+        self.rect = self.image.get_rect(center=(1650, 315))
         self.mask = pg.mask.from_surface(self.image)
-        self.speedC = 10
+        self.speed = 10
         self.active = True
 
     def update(self):
         if self.rect.x <= -self.rect.width:
             self.kill()
-        self.rect.x -= self.speedC
+        self.rect.x -= self.speed
+
+    def timer(self):
+        self.speed += 1
+        print(self.speed)
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+
+
+class Pterodactyl(pg.sprite.Sprite):
+    def __init__(self):
+        pg.sprite.Sprite.__init__(self)
+        self.image = pg.image.load(r'images/Chrome_Pterodactyl_Up.png').convert_alpha()  # 194*127//194*173
+        self.image = pg.transform.scale(self.image, (100, 40))
+        self.rect = self.image.get_rect(center=(1650, random.randrange(220, 290)))
+        self.mask = pg.mask.from_surface(self.image)
+        self.speed = 10
+        self.flag_leg = True
+        self.active = True
+
+    def update(self):
+        global tickF
+
+        if self.flag_leg and tickF >= 20:
+            tickF = 0
+            self.flag_leg = False
+            self.image = pg.image.load(r'images/Chrome_Pterodactyl_Down.png').convert_alpha()
+            self.image = pg.transform.scale(self.image, (100, 50))
+            self.mask = pg.mask.from_surface(self.image)
+        elif not self.flag_leg and tickF >= 20:
+            tickF = 0
+            self.flag_leg = True
+            self.image = pg.image.load(r'images/Chrome_Pterodactyl_Up.png').convert_alpha()
+            self.image = pg.transform.scale(self.image, (100, 40))
+            self.mask = pg.mask.from_surface(self.image)
+
+        if self.rect.x <= -self.rect.width:
+            self.kill()
+        self.rect.x -= self.speed
+
+    def timer(self):
+        self.speed += 1
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -143,6 +234,7 @@ horizon = Horizon()
 clouds = pg.sprite.Group()
 clouds.add(Cloud())
 obstacles = pg.sprite.Group()
+pterodactyl = pg.sprite.Group()
 
 background = pg.Surface((WIDTH, HEIGHT))
 background.fill(WHITE)
@@ -153,10 +245,13 @@ pg.display.update()
 flag_play = True
 while flag_play:
     clock.tick(FPS)
+    time_play += 1
     tickC += 1
     tickO += 1
     tickR += 1
     tickJ += 1
+    tickF += 1
+    spawn = random.randrange(0, 2)
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
@@ -166,37 +261,70 @@ while flag_play:
     if not flag_play:
         break
 
+    if time_play >= 60 * 5:
+        horizon.timer()
+        for elem in obstacles:
+            elem.timer()
+        for elem in pterodactyl:
+            elem.timer()
+        time_play = 0
+
     if tickC == 90:
         tickC = 0
         clouds.add(Cloud())
 
-    if tickO >= random.randrange(120, 180, 15):
+    if spawn == 0 and tickO >= random.randint(90, 120):
         tickO = 0
         obstacles.add(Obstacle())
+    elif spawn == 1 and tickO >= random.randint(90, 120):
+        tickO = 0
+        pterodactyl.add(Pterodactyl())
 
     keys = pg.key.get_pressed()
-    if (keys[pg.K_UP] or keys[pg.K_SPACE]) and tickJ >= 60:
+    if (keys[pg.K_UP] or keys[pg.K_SPACE]) and tickJ >= 45:
         tickJ = 0
         dino.jump(dy=-1)
+
     if keys[pg.K_DOWN]:
-        dino.jump(dy=1)
+        dino.run(dy=1)
+    else:
+        dino.run(dy=0)
 
-    # if pg.sprite.spritecollideany(dino, obstacles, collided=pg.sprite.collide_mask):
-    #     t = acSound.get_length()
-    #     acSound.play()
-    #     pg.time.wait(int(t) * 1000)
-    #     break
+    if pg.sprite.spritecollideany(dino, obstacles, collided=pg.sprite.collide_mask):
+        dino.death(dead=1)
+        screen.blit(background, (0, 0))
+        horizon.draw(screen)
+        clouds.draw(screen)
+        obstacles.draw(screen)
+        pterodactyl.draw(screen)
+        dino.draw(screen)
+        pg.display.update()
+        # pg.time.wait(60 * 100)
+        break
 
-    dino.run()
+    if pg.sprite.spritecollideany(dino, pterodactyl, collided=pg.sprite.collide_mask):
+        dino.death(dead=1)
+        screen.blit(background, (0, 0))
+        horizon.draw(screen)
+        clouds.draw(screen)
+        obstacles.draw(screen)
+        pterodactyl.draw(screen)
+        dino.draw(screen)
+        pg.display.update()
+        # pg.time.wait(60 * 100)
+        break
+
     dino.jump()
     clouds.update()
     horizon.update()
     obstacles.update()
+    pterodactyl.update()
 
     screen.blit(background, (0, 0))
 
     horizon.draw(screen)
     clouds.draw(screen)
     obstacles.draw(screen)
+    pterodactyl.draw(screen)
     dino.draw(screen)
     pg.display.update()
