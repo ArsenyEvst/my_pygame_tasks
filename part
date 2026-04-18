@@ -1,0 +1,86 @@
+class Dino(pg.sprite.Sprite):
+    def __init__(self):
+        pg.sprite.Sprite.__init__(self)
+        self.image = pg.image.load(r'images/Chrome_T-Rex_Right_Run.png').convert_alpha()
+        self.rect = self.image.get_rect(bottom=350)
+        self.rect.centerx = 100
+        self.mask = pg.mask.from_surface(self.image)
+        self.speed = 0
+        self.g = 0
+        self.flag_leg = True
+        self.flag_state = STATE_NORMAL
+        self.tickK = 0
+
+    def jump(self, dy=0):
+        if dy == -1 and self.flag_state == STATE_NORMAL:
+            self.flag_state = STATE_JUMP
+            self.speed = 10
+            self.g = 0.04
+            self.tickK = 1
+        self.speed -= self.g * self.tickK
+        self.tickK += 1
+        self.rect.y -= self.speed
+        if self.flag_state == STATE_JUMP and self.rect.bottom > 350:
+            self.rect.bottom = 350
+            self.rect.centerx = 100
+            self.speed = 0
+            self.g = 0
+            self.tickK = 0
+            self.flag_state = STATE_NORMAL
+
+    def run(self, dy=0):
+        global tickR
+
+        flag_temp = -1
+        if dy == 0 and self.flag_state != STATE_JUMP:
+            self.flag_state = STATE_NORMAL
+            flag_temp = 1
+        if dy == 1 and self.flag_state != STATE_JUMP:
+            flag_temp = 2
+            self.flag_state = STATE_DUCK
+        if self.flag_state != STATE_JUMP:
+            if dy == 1:
+                self.flag_state = STATE_DUCK
+            else:
+                self.flag_state = STATE_NORMAL
+
+        if tickR >= 10 and self.flag_state != STATE_JUMP:
+            if self.flag_state == STATE_NORMAL:
+                if self.flag_leg:
+                    self.flag_leg = False
+                    self.image = pg.image.load(r'images/Chrome_T-Rex_Left_Run.png').convert_alpha()
+                else:
+                    self.flag_leg = True
+                    self.image = pg.image.load(r'images/Chrome_T-Rex_Right_Run.png').convert_alpha()
+            else:
+                if self.flag_leg:
+                    self.flag_leg = False
+                    self.image = pg.image.load(r'images/Chrome_T-Rex_Left_Duck.png').convert_alpha()
+                else:
+                    self.flag_leg = True
+                    self.image = pg.image.load(r'images/Chrome_T-Rex_Right_Duck.png').convert_alpha()
+            self.mask = pg.mask.from_surface(self.image)
+            tickR = 0
+
+        if self.flag_state != STATE_JUMP:
+            self.rect = self.image.get_rect(bottom=350)
+            self.rect.centerx = 100
+
+        # if flag_temp == 1:
+        #     self.rect = self.image.get_rect(center=(100, 510))
+        # elif flag_temp == 2:
+        #     self.rect = self.image.get_rect(center=(100, 526))
+
+    def death(self, dead=0):
+        if dead == 1:
+            self.image = pg.image.load(r'images/Dead_Chrome_T-Rex.png')
+            self.rect.centerx = 100
+            screen.blit(self.image, self.rect)
+            if self.flag_state != STATE_JUMP:
+                self.rect.bottom = 350
+
+    def restart(self):
+        self.rest_image = pg.image.load(r'images/Chromium_T-Rex-restart.png')
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
