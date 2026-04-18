@@ -84,3 +84,16 @@ class Dino(pg.sprite.Sprite):
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
+
+
+    if pg.sprite.spritecollideany(dino, obstacles, collided=pg.sprite.collide_mask):
+        dino.death(dead=1)
+        screen.blit(background, (0, 0))
+        horizon.draw(screen)
+        clouds.draw(screen)
+        obstacles.draw(screen)
+        pterodactyl.draw(screen)
+        dino.draw(screen)
+        pg.display.update()
+        # pg.time.wait(600*2)
+        break
