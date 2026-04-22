@@ -5,6 +5,7 @@ import random
 FPS = 60
 WIDTH, HEIGHT = 1600, 400
 WHITE = (255, 255, 255)
+BLACK = (95, 95, 95)
 tickC = 0
 tickO = 0
 tickR = 0
@@ -12,9 +13,15 @@ tickJ = 0
 tickF = 0
 spawn = -1
 time_play = 0
+all_time_play = 0
+scores = 0
+game_over = False
 STATE_NORMAL = "normal"
 STATE_JUMP = "jump"
 STATE_DUCK = "duck"
+GAME_SPEED = 10
+next_cactus_spawn = random.randint(90, 120)
+next_bird_spawn = random.randint(90, 150)
 
 
 class Dino(pg.sprite.Sprite):
@@ -28,10 +35,14 @@ class Dino(pg.sprite.Sprite):
         self.g = 0
         self.flag_leg = True
         self.flag_state = STATE_NORMAL
+        self.is_dead = False
         self.tickK = 0
 
     def jump(self, dy=0):
-        if dy == -1 and self.flag_state != STATE_DUCK:
+        if self.is_dead:
+            return
+
+        if dy == -1 and self.flag_state == STATE_NORMAL:
             self.flag_state = STATE_JUMP
             self.speed = 10
             self.g = 0.04
@@ -49,6 +60,9 @@ class Dino(pg.sprite.Sprite):
 
     def run(self, dy=0):
         global tickR
+
+        if self.is_dead:
+            return
 
         flag_temp = -1
         if dy == 0 and self.flag_state != STATE_JUMP:
@@ -92,9 +106,22 @@ class Dino(pg.sprite.Sprite):
 
     def death(self, dead=0):
         if dead == 1:
+            self.is_dead = True
             self.image = pg.image.load(r'images/Dead_Chrome_T-Rex.png')
             self.rect.centerx = 100
             screen.blit(self.image, self.rect)
+            if self.flag_state != STATE_JUMP:
+                self.rect.bottom = 350
+
+    def restart(self, keys):
+        if self.is_dead:
+            self.rest_image = pg.image.load(r'images/Chromium_T-Rex-restart.png')
+            self.rest_rect = self.rest_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(self.rest_image, self.rest_rect)
+            text_rest.draw(screen)
+            if keys[pg.K_SPACE] or keys[pg.K_UP]:
+                return True
+        return False
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -114,7 +141,7 @@ class Horizon(pg.sprite.Sprite):
         self.imageC = pg.image.load(r'images/Chromium_T-Rex-cloud.png').convert_alpha()
         self.rectC = self.imageC.get_rect(center=(WIDTH / 2, self.yC))
         self.maskC = pg.mask.from_surface(self.imageC)
-        self.speed = 10
+        self.speed = GAME_SPEED
 
     def update(self):
         global time_play
@@ -131,9 +158,6 @@ class Horizon(pg.sprite.Sprite):
                 self.imageH2 = pg.image.load(r'images/Chromium_T-Rex-horizon.png').convert_alpha()
                 self.rectH2 = self.imageH2.get_rect(center=(WIDTH / 2 + self.len_horizon - 100, 350))
                 self.flag_horizon = 1
-
-    def timer(self):
-        self.speed += 1
 
     def draw(self, screen):
         screen.blit(self.imageH1, self.rectH1)
@@ -166,17 +190,14 @@ class Obstacle(pg.sprite.Sprite):
         self.image = pg.image.load(obstacle_is).convert_alpha()
         self.rect = self.image.get_rect(center=(1650, 315))
         self.mask = pg.mask.from_surface(self.image)
-        self.speed = 10
+        self.speed = GAME_SPEED
         self.active = True
 
     def update(self):
+        self.speed = GAME_SPEED
         if self.rect.x <= -self.rect.width:
             self.kill()
         self.rect.x -= self.speed
-
-    def timer(self):
-        self.speed += 1
-        print(self.speed)
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -189,12 +210,13 @@ class Pterodactyl(pg.sprite.Sprite):
         self.image = pg.transform.scale(self.image, (100, 40))
         self.rect = self.image.get_rect(center=(1650, random.randrange(220, 290)))
         self.mask = pg.mask.from_surface(self.image)
-        self.speed = 10
+        self.speed = GAME_SPEED
         self.flag_leg = True
         self.active = True
 
     def update(self):
         global tickF
+        self.speed = GAME_SPEED
 
         if self.flag_leg and tickF >= 20:
             tickF = 0
@@ -213,11 +235,38 @@ class Pterodactyl(pg.sprite.Sprite):
             self.kill()
         self.rect.x -= self.speed
 
-    def timer(self):
-        self.speed += 1
-
     def draw(self, screen):
         screen.blit(self.image, self.rect)
+
+
+class Text_rest:
+    def __init__(self, text, text_size, text_color, text_pos):
+        self.font = pg.font.SysFont(None, text_size)
+        self.suft = self.font.render(text, True, text_color)
+        self.rect = self.suft.get_rect(center=text_pos)
+
+    def draw(self, screen):
+        screen.blit(self.suft, self.rect)
+
+
+class Text_score:
+    def __init__(self, text, text_size, text_color, text_pos):
+        self.font = pg.font.SysFont(None, text_size)
+        self.suft = self.font.render(text, True, text_color)
+        self.rect = self.suft.get_rect(center=text_pos)
+
+    def update(self):
+        global scores
+
+        if all_time_play <= 10 * 60:
+            scores += 1
+        elif 60 * 60 >= all_time_play > 10 * 60:
+            scores += 5
+        elif all_time_play <= 180 * 60 < all_time_play:
+            scores += 10
+
+    def draw(self, screen):
+        screen.blit(self.suft, self.rect)
 
 
 pg.init()
@@ -235,6 +284,8 @@ clouds = pg.sprite.Group()
 clouds.add(Cloud())
 obstacles = pg.sprite.Group()
 pterodactyl = pg.sprite.Group()
+text_rest = Text_rest("Чтобы начать игру заново, нажмите прыжок", 32, BLACK, (WIDTH / 2, HEIGHT * 1 / 3))
+text_sc = Text_rest(r'scores', 32, BLACK, (1400, 50))
 
 background = pg.Surface((WIDTH, HEIGHT))
 background.fill(WHITE)
@@ -246,6 +297,7 @@ flag_play = True
 while flag_play:
     clock.tick(FPS)
     time_play += 1
+    all_time_play += 1
     tickC += 1
     tickO += 1
     tickR += 1
@@ -261,58 +313,68 @@ while flag_play:
     if not flag_play:
         break
 
-    if time_play >= 60 * 5:
-        horizon.timer()
-        for elem in obstacles:
-            elem.timer()
-        for elem in pterodactyl:
-            elem.timer()
+    if time_play >= 60:
+        if GAME_SPEED <= 25:
+            GAME_SPEED += 0.1  # +1 = 10 sec
+        horizon.speed = GAME_SPEED
+        # print(GAME_SPEED)
         time_play = 0
 
     if tickC == 90:
         tickC = 0
         clouds.add(Cloud())
 
-    if spawn == 0 and tickO >= random.randint(90, 120):
+    if spawn == 0 and tickO >= next_cactus_spawn:
         tickO = 0
         obstacles.add(Obstacle())
-    elif spawn == 1 and tickO >= random.randint(90, 120):
+    elif spawn == 1 and tickO >= next_bird_spawn:
         tickO = 0
         pterodactyl.add(Pterodactyl())
 
     keys = pg.key.get_pressed()
-    if (keys[pg.K_UP] or keys[pg.K_SPACE]) and tickJ >= 45:
-        tickJ = 0
-        dino.jump(dy=-1)
+    if not game_over:
+        if (keys[pg.K_UP] or keys[pg.K_SPACE]) and tickJ >= 45:
+            tickJ = 0
+            dino.jump(dy=-1)
+        if keys[pg.K_DOWN]:
+            dino.run(dy=1)
+        else:
+            dino.run(dy=0)
 
-    if keys[pg.K_DOWN]:
-        dino.run(dy=1)
-    else:
-        dino.run(dy=0)
+    if dino.restart(keys):
+        game_over = False
+        GAME_SPEED = 10
+        next_cactus_spawn = random.randint(90, 120)
+        next_bird_spawn = random.randint(90, 150)
+        time_play = 0
+        tickO = 0
+        tickR = 0
+        tickF = 0
+
+        pg.time.wait(6 * 100)
+
+        dino.is_dead = False
+        dino.image = pg.image.load(r'images/Chrome_T-Rex_Right_Run.png')
+        dino.rect.bottom = 530
+        dino.rect.centerx = 100
+
+        obstacles.empty()
+        clouds.empty()
+        pterodactyl.empty()
+
+        continue
 
     if pg.sprite.spritecollideany(dino, obstacles, collided=pg.sprite.collide_mask):
         dino.death(dead=1)
-        screen.blit(background, (0, 0))
-        horizon.draw(screen)
-        clouds.draw(screen)
-        obstacles.draw(screen)
-        pterodactyl.draw(screen)
-        dino.draw(screen)
-        pg.display.update()
-        # pg.time.wait(60 * 100)
-        break
+        GAME_SPEED = 0
+        horizon.speed = GAME_SPEED
+        game_over = True
 
     if pg.sprite.spritecollideany(dino, pterodactyl, collided=pg.sprite.collide_mask):
         dino.death(dead=1)
-        screen.blit(background, (0, 0))
-        horizon.draw(screen)
-        clouds.draw(screen)
-        obstacles.draw(screen)
-        pterodactyl.draw(screen)
-        dino.draw(screen)
-        pg.display.update()
-        # pg.time.wait(60 * 100)
-        break
+        GAME_SPEED = 0
+        horizon.speed = GAME_SPEED
+        game_over = True
 
     dino.jump()
     clouds.update()
@@ -327,4 +389,6 @@ while flag_play:
     obstacles.draw(screen)
     pterodactyl.draw(screen)
     dino.draw(screen)
+    text_rest.draw(screen)
+    text_sc.draw(screen)
     pg.display.update()
