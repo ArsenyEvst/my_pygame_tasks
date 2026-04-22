@@ -15,6 +15,8 @@ spawn = -1
 time_play = 0
 all_time_play = 0
 scores = 0
+best_scores = 0
+game_count = 0
 game_over = False
 STATE_NORMAL = "normal"
 STATE_JUMP = "jump"
@@ -250,20 +252,48 @@ class Text_rest:
 
 
 class Text_score:
-    def __init__(self, text, text_size, text_color, text_pos):
+    def __init__(self, text_size, text_color):
+        self.text_color = text_color
         self.font = pg.font.SysFont(None, text_size)
-        self.suft = self.font.render(text, True, text_color)
-        self.rect = self.suft.get_rect(center=text_pos)
+        self.suft = self.font.render("Ваши очки: 0", True, self.text_color)
+        self.rect = self.suft.get_rect(centery=25)
+        self.rect.right = 1500
 
     def update(self):
         global scores
+        global all_time_play
 
         if all_time_play <= 10 * 60:
-            scores += 1
-        elif 60 * 60 >= all_time_play > 10 * 60:
-            scores += 5
-        elif all_time_play <= 180 * 60 < all_time_play:
-            scores += 10
+            scores += 0.1
+        elif 10 * 60 < all_time_play <= 60 * 60:
+            scores += 0.2
+        else:
+            scores += 0.4
+
+        self.suft = self.font.render(f"Ваши очки: {int(scores)}", True, self.text_color)
+        self.rect.right = 1500
+
+    def draw(self, screen):
+        screen.blit(self.suft, self.rect)
+
+
+class Text_score_best:
+    def __init__(self, text_size, text_color):
+        self.text_color = text_color
+        self.font = pg.font.SysFont(None, text_size)
+        self.suft = self.font.render("Ваши лучшие очки: 0", True, self.text_color)
+        self.rect = self.suft.get_rect(centery=50)
+        self.rect.right = 1500
+
+    def update(self):
+        global scores
+        global best_scores
+
+        if scores > best_scores:
+            best_scores = scores
+
+        self.suft = self.font.render(f"Ваши лучшие очки: {int(best_scores)}", True, self.text_color)
+        self.rect.right = 1500
 
     def draw(self, screen):
         screen.blit(self.suft, self.rect)
@@ -285,7 +315,8 @@ clouds.add(Cloud())
 obstacles = pg.sprite.Group()
 pterodactyl = pg.sprite.Group()
 text_rest = Text_rest("Чтобы начать игру заново, нажмите прыжок", 32, BLACK, (WIDTH / 2, HEIGHT * 1 / 3))
-text_sc = Text_rest(r'scores', 32, BLACK, (1400, 50))
+text_sc = Text_score(32, BLACK)
+text_sc_b = Text_score_best(32, BLACK)
 
 background = pg.Surface((WIDTH, HEIGHT))
 background.fill(WHITE)
@@ -367,12 +398,18 @@ while flag_play:
     if pg.sprite.spritecollideany(dino, obstacles, collided=pg.sprite.collide_mask):
         dino.death(dead=1)
         GAME_SPEED = 0
+        scores = -1
+        all_time_play = 0
+        game_count += 1
         horizon.speed = GAME_SPEED
         game_over = True
 
     if pg.sprite.spritecollideany(dino, pterodactyl, collided=pg.sprite.collide_mask):
         dino.death(dead=1)
         GAME_SPEED = 0
+        scores = -1
+        all_time_play = 0
+        game_count += 1
         horizon.speed = GAME_SPEED
         game_over = True
 
@@ -381,6 +418,8 @@ while flag_play:
     horizon.update()
     obstacles.update()
     pterodactyl.update()
+    text_sc.update()
+    text_sc_b.update()
 
     screen.blit(background, (0, 0))
 
@@ -389,6 +428,8 @@ while flag_play:
     obstacles.draw(screen)
     pterodactyl.draw(screen)
     dino.draw(screen)
-    text_rest.draw(screen)
+    if all_time_play < 3 * 60 and game_over != 0:
+        text_rest.draw(screen)
     text_sc.draw(screen)
+    text_sc_b.draw(screen)
     pg.display.update()
