@@ -101,11 +101,6 @@ class Dino(pg.sprite.Sprite):
             self.rect = self.image.get_rect(bottom=350)
             self.rect.centerx = 100
 
-        # if flag_temp == 1:
-        #     self.rect = self.image.get_rect(center=(100, 510))
-        # elif flag_temp == 2:
-        #     self.rect = self.image.get_rect(center=(100, 526))
-
     def death(self, dead=0):
         if dead == 1:
             self.is_dead = True
@@ -117,9 +112,6 @@ class Dino(pg.sprite.Sprite):
 
     def restart(self, keys):
         if self.is_dead:
-            self.rest_image = pg.image.load(r'images/Chromium_T-Rex-restart.png')
-            self.rest_rect = self.rest_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-            screen.blit(self.rest_image, self.rest_rect)
             text_rest.draw(screen)
             if keys[pg.K_SPACE] or keys[pg.K_UP]:
                 return True
@@ -208,7 +200,7 @@ class Obstacle(pg.sprite.Sprite):
 class Pterodactyl(pg.sprite.Sprite):
     def __init__(self):
         pg.sprite.Sprite.__init__(self)
-        self.image = pg.image.load(r'images/Chrome_Pterodactyl_Up.png').convert_alpha()  # 194*127//194*173
+        self.image = pg.image.load(r'images/Chrome_Pterodactyl_Up.png').convert_alpha()
         self.image = pg.transform.scale(self.image, (100, 40))
         self.rect = self.image.get_rect(center=(1650, random.randrange(220, 290)))
         self.mask = pg.mask.from_surface(self.image)
@@ -302,11 +294,8 @@ class Text_score_best:
 pg.init()
 screen = pg.display.set_mode((WIDTH, HEIGHT))
 screen.fill(WHITE)
-pg.display.set_caption("Игра")
+pg.display.set_caption("Chrome Dino")
 clock = pg.time.Clock()
-# pg.mixer.music.load("sound/bgs.wav")
-# acSound = pg.mixer.Sound("sound/accident.wav")
-# pg.mixer.music.play(-1)
 
 dino = Dino()
 horizon = Horizon()
@@ -348,7 +337,6 @@ while flag_play:
         if GAME_SPEED <= 25:
             GAME_SPEED += 0.1  # +1 = 10 sec
         horizon.speed = GAME_SPEED
-        # print(GAME_SPEED)
         time_play = 0
 
     if tickC == 90:
